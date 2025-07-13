@@ -1,4 +1,5 @@
 import pygame
+from mesa import run_game
 
 pygame.init()
 
@@ -18,10 +19,10 @@ RED = (200, 0, 0)
 DARK_RED = (150, 0, 0)
 
 font = pygame.font.Font(None, 50)
-
+correr = False
 class Button:
     def __init__(self, x, y, width, height, text, action=None, color=None, hover_color=None):
-        # Setting default colors if not provided, inside the __init__
+
         if color is None:
             color = LIGHT_BLUE
         if hover_color is None:
@@ -81,6 +82,8 @@ def exit_game():
 
 def host_game():
     print("¡Creando una partida como host!")
+    global correr
+    correr = True
 
 def join_game():
     print("¡Uniéndome a una partida existente!")
@@ -126,9 +129,7 @@ back_button = Button(20, SCREEN_HEIGHT - 50 - 20, 150, 50, "Back", back_to_main_
 
 game_screen_buttons = [host_button, join_button, back_button]
 
-
-
-menu_image = pygame.image.load('pytruco\\textures\menu\logo.png')
+menu_image = pygame.image.load('textures\menu\logo.png')
 
 menu_image = pygame.transform.scale(menu_image, (300, 300))
 image_rect = menu_image.get_rect()
@@ -137,6 +138,11 @@ image_rect.centery = SCREEN_HEIGHT // 2
 
 running = True
 while running:
+    if correr == True:
+
+        pygame.quit()
+        running = False
+        run_game()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False

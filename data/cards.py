@@ -4,4 +4,4 @@ class cartas:
         self.valor = int(val)
         self.puntos = puntos
         self.id = f"{palo}{val}"
-        self.skin = f'pytruco\\textures\\{self.id}.png'
+        self.skin = f'textures\\{self.id}.png'
