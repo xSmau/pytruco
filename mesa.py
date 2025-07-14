@@ -63,8 +63,11 @@ def run_game():
     
     cartas_en_mesa = [] 
 
-    posicion_inicial_mano_x = 250
+    posicion_inicial_mano_x = 300
     espacio_entre_cartas = 80
+
+    fondo_img = pygame.image.load("textures\pytrucofondobackcarta\Bfondomesa.png")
+    fondo_rect = fondo_img.get_rect()
 
     for carta_obj_in_hand in jugador1.mano:
         imagen_carta_actual = pygame.image.load(carta_obj_in_hand.skin).convert_alpha()
@@ -104,6 +107,7 @@ def run_game():
     sonido_reproducido_lan = [False] * len(cartasImg) 
 
     while running:
+
         indice_carta_a_eliminar = -1 
 
         for event in pygame.event.get():
@@ -145,6 +149,7 @@ def run_game():
                 current_x_reposition += espacio_entre_cartas
             
         screen.fill((0, 0, 0))
+        screen.blit(fondo_img,fondo_rect)
 
         screen.blit(imagen_virada, rect_virada)
 
@@ -192,7 +197,6 @@ def run_game():
                 cur_x_mesa += 20
             except pygame.error as e:
                 print(f"Error al dibujar carta en mesa '{objeto_carta_lanzada.skin}': {e}")
-
 
         pygame.display.flip()
         clock.tick(60)

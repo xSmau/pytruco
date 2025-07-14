@@ -130,7 +130,8 @@ back_button = Button(20, SCREEN_HEIGHT - 50 - 20, 150, 50, "Back", back_to_main_
 game_screen_buttons = [host_button, join_button, back_button]
 
 menu_image = pygame.image.load('textures\menu\logo.png')
-
+menu_fondo= pygame.image.load("textures\pytrucofondobackcarta\Fondomenu.png")
+menu_fondo_rect = menu_fondo.get_rect()
 menu_image = pygame.transform.scale(menu_image, (300, 300))
 image_rect = menu_image.get_rect()
 image_rect.centerx = (SCREEN_WIDTH - button_width - margin_right) // 2 
@@ -138,6 +139,8 @@ image_rect.centery = SCREEN_HEIGHT // 2
 
 running = True
 while running:
+    screen.fill(BLACK)
+    screen.blit(menu_fondo,menu_fondo_rect)
     if correr == True:
 
         pygame.quit()
@@ -154,7 +157,6 @@ while running:
             for button in game_screen_buttons:
                 button.handle_event(event)
 
-    screen.fill(BLACK)
 
     screen.blit(menu_image, image_rect)
     if current_game_state == MENU_PRINCIPAL:
