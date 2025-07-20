@@ -1,207 +1,231 @@
 import pygame
 import random
+import time
 
 from data.cards import cartas
 from data.players import jugadores
 
+pygame.init()  # Inicializa todos los módulos de pygame
 pygame.mixer.init()
 
+screen_width = 800
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Truco - VS PC")
+
+font = pygame.font.Font(None, 36)
+
+mazo = []
+cartas_en_mesa = []
+puntos_jugador = 0
+puntos_pc = 0
+manos_jugador = 0
+manos_pc = 0
+ronda_en_curso = True
+turno_jugador = True
+
+# ---------- FUNCIONES DE JUEGO ----------
 def barajeo():
     global mazo
-    IDs = [
-        ["M1", 8], ["M2", 9], ["M3", 10], ["M4", 1], ["M5", 2], ["M6", 3], ["M7", 11], ["M10", 5], ["M11", 6], ["M12", 7],
-        ["E1", 14], ["E2", 9], ["E3", 10], ["E4", 1], ["E5", 2], ["E6", 3], ["E7", 12], ["E10", 5], ["E11", 6], ["E12", 7],
-        ["C1", 8], ["C2", 9], ["C3", 10], ["C4", 1], ["C5", 2], ["C6", 3], ["C7", 4], ["C10", 5], ["C11", 6], ["C12", 7],
-        ["B1", 13], ["B2", 9], ["B3", 10], ["B4", 1], ["B5", 2], ["B6", 3], ["B7", 4], ["B10", 5], ["B11", 6], ["B12", 7]
-    ]
+    IDs = [["{}{}".format(p, v), pts] for p, valores in zip("MECB", [[1,2,3,4,5,6,7,10,11,12]]*4)
+           for v, pts in zip(valores, [14 if v==1 and p=='E' else 13 if v==1 and p=='B' else 12 if v==7 and p=='E' else 11 if v==7 and p=='M' else 8 for v in valores])]
     random.shuffle(IDs)
-    mazo = []
-
-    for info_id_carta in IDs:
-        if len(info_id_carta[0]) < 3:
-            palo_cadena = info_id_carta[0][0]
-            valor_cadena = info_id_carta[0][1:]
-            cartaSeleccionada = cartas(palo=palo_cadena, val=valor_cadena, puntos=info_id_carta[1])
-        else:
-            palo_cadena = info_id_carta[0][0]
-            valor_cadena = info_id_carta[0][1:]
-            cartaSeleccionada = cartas(palo=palo_cadena, val=valor_cadena, puntos=info_id_carta[1])
-
-        mazo.append(cartaSeleccionada)
+    mazo.clear()
+    for info in IDs:
+        palo, val = info[0][0], info[0][1:]
+        mazo.append(cartas(palo=palo, val=val, puntos=info[1]))
 
 def iniJugadores():
     global jugador1, jugador2
     jugador1 = jugadores(1)
     jugador2 = jugadores(2)
 
+def repartir_animado():
+    repartir()
+    for i in range(3):
+        animar_carta("jugador", i)
+        animar_carta("pc", i)
+
 def repartir():
     global vira
- 
     for _ in range(3):
         jugador1.recibirCarta(mazo.pop(0))
         jugador2.recibirCarta(mazo.pop(0))
     vira = mazo.pop(0)
 
-def run_game():
-    pygame.init()
-    screen_width = 800
-    screen_height = 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Troco")
+def animar_carta(destino, idx):
+    x_final = 300 + idx * 80 if destino == "jugador" else 300 + idx * 80
+    y_final = 450 if destino == "jugador" else 50
+    img_carta = pygame.image.load("textures/pytrucofondobackcarta/back.png")
+    img_carta = pygame.transform.scale(img_carta, (100, 150))
+    for i in range(30):
+        t = i / 30
+        x = screen_width // 2 + (x_final - screen_width // 2) * t
+        y = screen_height // 2 + (y_final - screen_height // 2) * t
+        screen.fill((0, 0, 0))
+        screen.blit(fondo_img, fondo_rect)
+        screen.blit(img_carta, (x, y))
+        pygame.display.flip()
+        pygame.time.delay(10)
 
-    running = True
+def mostrar_mano_estatica():
+    # Cartas del jugador abajo
+    for i, carta in enumerate(jugador1.mano):
+        imagen = pygame.image.load(carta.skin).convert_alpha()
+        imagen = pygame.transform.scale(imagen, (100, 150))
+        x = 300 + i * 80
+        y = 450
+        screen.blit(imagen, (x, y))
+    # Cartas de la PC arriba (mostrando reverso)
+    for i, carta in enumerate(jugador2.mano):
+        imagen = pygame.image.load("textures/pytrucofondobackcarta/back.png")
+        imagen = pygame.transform.scale(imagen, (100, 150))
+        x = 300 + i * 80
+        y = 50
+        screen.blit(imagen, (x, y))
+
+def mostrar_cartas_en_mesa():
+    posiciones = {
+        "jugador": (screen_width // 2 - 40, screen_height // 2 + 50),
+        "pc": (screen_width // 2 - 40, screen_height // 2 - 150)
+    }
+    if len(cartas_en_mesa) >= 1:
+        carta_j = cartas_en_mesa[-2] if len(cartas_en_mesa) == 2 else cartas_en_mesa[-1]
+        imagen_j = pygame.image.load(carta_j.skin).convert_alpha()
+        imagen_j = pygame.transform.scale(imagen_j, (100, 150))
+        screen.blit(imagen_j, posiciones["jugador"])
+    if len(cartas_en_mesa) == 2:
+        carta_pc = cartas_en_mesa[-1]
+        imagen_pc = pygame.image.load(carta_pc.skin).convert_alpha()
+        imagen_pc = pygame.transform.scale(imagen_pc, (100, 150))
+        screen.blit(imagen_pc, posiciones["pc"])
+
+def elegir_carta_pc():
+    return max(jugador2.mano, key=lambda c: c.puntos)
+
+def animar_colocacion(carta, destino):
+    x_inicial = 300 if destino == "jugador" else 300
+    y_inicial = 450 if destino == "jugador" else 50
+    x_final = screen_width // 2
+    y_final = screen_height // 2
+    imagen = pygame.image.load(carta.skin).convert_alpha()
+    imagen = pygame.transform.scale(imagen, (70, 100))
+    for i in range(20):
+        t = i / 20
+        x = x_inicial + (x_final - x_inicial) * t
+        y = y_inicial + (y_final - y_inicial) * t
+        screen.blit(fondo_img, fondo_rect)
+        screen.blit(imagen, (x, y))
+        pygame.display.flip()
+        pygame.time.delay(15)
+
+def evaluar_mano():
+    global manos_jugador, manos_pc, cartas_en_mesa
+    if len(cartas_en_mesa) < 2:
+        return
+    c1, c2 = cartas_en_mesa[-2], cartas_en_mesa[-1]
+    if c1.puntos > c2.puntos:
+        manos_jugador += 1
+    elif c1.puntos < c2.puntos:
+        manos_pc += 1
+    cartas_en_mesa = []
+
+def chequear_ronda():
+    global puntos_jugador, puntos_pc, manos_jugador, manos_pc, ronda_en_curso
+    if manos_jugador >= 2:
+        puntos_jugador += 1
+        mostrar_mensaje("¡Ganaste la ronda!")
+        manos_jugador = manos_pc = 0
+        ronda_en_curso = False
+    elif manos_pc >= 2:
+        puntos_pc += 1
+        mostrar_mensaje("La PC ganó la ronda")
+        manos_jugador = manos_pc = 0
+        ronda_en_curso = False
+
+def mostrar_mensaje(texto):
+    mensaje = font.render(texto, True, (255, 255, 255))
+    rect = mensaje.get_rect(center=(screen_width // 2, screen_height // 2))
+    screen.blit(mensaje, rect)
+    pygame.display.flip()
+    pygame.time.delay(1500)
+
+def mostrar_puntaje():
+    pj = font.render(f"Jugador: {puntos_jugador}", True, (255, 255, 255))
+    pc = font.render(f"PC: {puntos_pc}", True, (255, 255, 255))
+    screen.blit(pj, (10, 10))
+    screen.blit(pc, (10, 40))
+
+# ---------- LOOP PRINCIPAL ----------
+def run_game():
+    global ronda_en_curso, turno_jugador
     clock = pygame.time.Clock()
+
+    global fondo_img, fondo_rect
+    fondo_img = pygame.image.load("textures/pytrucofondobackcarta/Bfondomesa.png")
+    fondo_rect = fondo_img.get_rect()
 
     barajeo()
     iniJugadores()
-    repartir()
-
-    cartasImg = []
-    image_rect = []
-    aumentada = []
-    auRect = []
-    
-    cartas_en_mesa = [] 
-
-    posicion_inicial_mano_x = 300
-    espacio_entre_cartas = 80
-
-    fondo_img = pygame.image.load("textures\pytrucofondobackcarta\Bfondomesa.png")
-    fondo_rect = fondo_img.get_rect()
-
-    for carta_obj_in_hand in jugador1.mano:
-        imagen_carta_actual = pygame.image.load(carta_obj_in_hand.skin).convert_alpha()
-        imagen_carta_actual = pygame.transform.scale(imagen_carta_actual, (100, 150))
-        cartasImg.append(imagen_carta_actual)
-
-        rect_carta_actual = imagen_carta_actual.get_rect()
-        rect_carta_actual.centerx = posicion_inicial_mano_x
-        rect_carta_actual.centery = 450
-        image_rect.append(rect_carta_actual)
-
-        factor_aumento = 1.5 
-        imagen_carta_aumentada = pygame.transform.scale(imagen_carta_actual, (int(imagen_carta_actual.get_width() * factor_aumento),
-                                                                            int(imagen_carta_actual.get_height() * factor_aumento)))
-        aumentada.append(imagen_carta_aumentada)
-        
-        rect_carta_aumentada = imagen_carta_aumentada.get_rect(center=rect_carta_actual.center)
-        auRect.append(rect_carta_aumentada)
-
-        posicion_inicial_mano_x += espacio_entre_cartas
+    repartir_animado()
 
     imagen_virada = pygame.image.load(vira.skin).convert_alpha()
     imagen_virada = pygame.transform.scale(imagen_virada, (100, 150))
     rect_virada = imagen_virada.get_rect(center=(700, 200))
 
-    try:
-        sond = pygame.mixer.Sound("sounds/card1.ogg")
-        lanz = pygame.mixer.Sound("sounds\cardSlide2.ogg")
-        sond.set_volume(0.6) 
-        lanz.set_volume(1)
-    except pygame.error as e:
-        print(f"Error al cargar el sonido: {e}")
-        pygame.quit()
-        exit()
+    carta_pc_pendiente = None
+    delay_pc = 30
+    pc_timer = 0
 
-    sonido_reproducido_sel = [False] * len(cartasImg) 
-    sonido_reproducido_lan = [False] * len(cartasImg) 
-
+    running = True
     while running:
-
-        indice_carta_a_eliminar = -1 
-
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE: 
-                    running = False
-            
-            if event.type == pygame.MOUSEBUTTONDOWN:
+
+            if event.type == pygame.MOUSEBUTTONDOWN and turno_jugador and ronda_en_curso:
                 mouse_x, mouse_y = event.pos
+                for carta in jugador1.mano:
+                    imagen = pygame.image.load(carta.skin).convert_alpha()
+                    imagen = pygame.transform.scale(imagen, (100, 150))
+                    rect = imagen.get_rect(center=(300 + jugador1.mano.index(carta)*80, 450))
+                    if rect.collidepoint(mouse_x, mouse_y):
+                        jugador1.mano.remove(carta)
+                        animar_colocacion(carta, "jugador")
+                        cartas_en_mesa.append(carta)
+                        turno_jugador = False
+                        carta_pc_pendiente = elegir_carta_pc()
+                        pc_timer = delay_pc
+                        break
 
-                for idx, objeto_carta_en_mano in enumerate(jugador1.mano):
-                    if image_rect[idx].collidepoint(mouse_x, mouse_y):
-                        print(f"¡Clic en la carta {objeto_carta_en_mano.valor}{objeto_carta_en_mano.pinta}! Eliminando...")
-                        indice_carta_a_eliminar = idx
-                        lanz.play() 
-                         
-                        break 
+        if not turno_jugador and carta_pc_pendiente and ronda_en_curso:
+            pc_timer -= 1
+            if pc_timer <= 0:
+                jugador2.mano.remove(carta_pc_pendiente)
+                animar_colocacion(carta_pc_pendiente, "pc")
+                cartas_en_mesa.append(carta_pc_pendiente)
+                carta_pc_pendiente = None
+                turno_jugador = True
+                evaluar_mano()
+                chequear_ronda()
 
-        if indice_carta_a_eliminar != -1:
-            objeto_carta_lanzada = jugador1.mano[indice_carta_a_eliminar]
-            
-            cartas_en_mesa.append(objeto_carta_lanzada) 
-            print(f"Carta '{objeto_carta_lanzada.valor}{objeto_carta_lanzada.pinta}' lanzada a la mesa. Total en mesa: {len(cartas_en_mesa)}")
+        if not ronda_en_curso:
+            pygame.time.delay(1000)
+            barajeo()
+            iniJugadores()
+            repartir_animado()
+            ronda_en_curso = True
+            turno_jugador = True
 
-            jugador1.mano.pop(indice_carta_a_eliminar)
-            
-            cartasImg.pop(indice_carta_a_eliminar)
-            image_rect.pop(indice_carta_a_eliminar)
-            aumentada.pop(indice_carta_a_eliminar)
-            auRect.pop(indice_carta_a_eliminar)
-            sonido_reproducido_sel.pop(indice_carta_a_eliminar)
-
-            current_x_reposition = 250 
-            for i in range(len(image_rect)):
-                image_rect[i].centerx = current_x_reposition
-                auRect[i].centerx = current_x_reposition
-                current_x_reposition += espacio_entre_cartas
-            
-        screen.fill((0, 0, 0))
-        screen.blit(fondo_img,fondo_rect)
-
+        screen.blit(fondo_img, fondo_rect)
         screen.blit(imagen_virada, rect_virada)
-
-        for carta_idx in range(len(cartasImg)):
-            mouse_pos = pygame.mouse.get_pos() 
-
-            mouse_sobre_carta = image_rect[carta_idx].collidepoint(mouse_pos)
-
-            if mouse_sobre_carta:
-                screen.blit(aumentada[carta_idx], auRect[carta_idx])
-                if not sonido_reproducido_sel[carta_idx]:
-                    sond.play() 
-                    sonido_reproducido_sel[carta_idx] = True
-                
-            else:
-                screen.blit(cartasImg[carta_idx], image_rect[carta_idx])
-                sonido_reproducido_sel[carta_idx] = False
-                
-
-                
-        # --- Modificaciones para dibujar las cartas en la mesa centradas ---
-        ancho_carta_mesa = 70
-        alto_carta_mesa = 100
-        espacio_entre_cartas_mesa = 10 # Espacio adicional entre cartas en la mesa
-
-        # Calcular el ancho total que ocuparán todas las cartas en la mesa
-        total_ancho_cartas_mesa = len(cartas_en_mesa) * ancho_carta_mesa + \
-                                 (len(cartas_en_mesa) - 1) * espacio_entre_cartas_mesa
-
-        # Calcular la posición X de inicio para centrar el grupo
-        posicion_mesa_x_inicio = (screen_width / 2) - (total_ancho_cartas_mesa / 2)
-        posicion_mesa_y = screen_height / 2 - alto_carta_mesa / 2 # Centrar verticalmente
-
-        cur_x_mesa = posicion_mesa_x_inicio
-        for objeto_carta_lanzada in cartas_en_mesa:
-            try:
-                
-                imagen_mesa = pygame.image.load(objeto_carta_lanzada.skin).convert_alpha()
-                imagen_mesa = pygame.transform.scale(imagen_mesa, (ancho_carta_mesa, alto_carta_mesa))
-                
-                # Dibujar cada carta usando la posición calculada
-                rect_mesa = imagen_mesa.get_rect(topleft=(cur_x_mesa, posicion_mesa_y))
-                screen.blit(imagen_mesa, rect_mesa)
-                
-                cur_x_mesa += 20
-            except pygame.error as e:
-                print(f"Error al dibujar carta en mesa '{objeto_carta_lanzada.skin}': {e}")
-
+        mostrar_mano_estatica()
+        mostrar_cartas_en_mesa()
+        mostrar_puntaje()
         pygame.display.flip()
         clock.tick(60)
 
-    pygame.quit() 
+    pygame.quit()
 
 if __name__ == '__main__':
     run_game()

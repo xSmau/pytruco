@@ -1,5 +1,6 @@
 import pygame
 from mesa import run_game
+import math
 
 pygame.init()
 
@@ -17,12 +18,18 @@ GREEN = (0, 180, 0)
 DARK_GREEN = (0, 100, 0)
 RED = (200, 0, 0)
 DARK_RED = (150, 0, 0)
+SHADOW_COLOR = (0, 0, 0, 100)
 
 font = pygame.font.Font(None, 50)
-correr = False
+
+# Estados del menú
+MENU_PRINCIPAL = 0
+PANTALLA_JUEGO = 1
+current_game_state = MENU_PRINCIPAL
+
+# -------------------- Botón --------------------
 class Button:
     def __init__(self, x, y, width, height, text, action=None, color=None, hover_color=None):
-
         if color is None:
             color = LIGHT_BLUE
         if hover_color is None:
@@ -38,8 +45,11 @@ class Button:
 
     def draw(self, screen):
         current_color = self.hover_color if self.is_hovered else self.color
-        pygame.draw.rect(screen, current_color, self.rect)
-
+        shadow_rect = self.rect.copy()
+        shadow_rect.x += 5
+        shadow_rect.y += 5
+        pygame.draw.rect(screen, (0, 0, 0), shadow_rect, border_radius=12)
+        pygame.draw.rect(screen, current_color, self.rect, border_radius=12)
         text_surface = font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
@@ -52,21 +62,7 @@ class Button:
                 if self.action:
                     self.action()
 
-def play_game():
-    print("¡Iniciando juego!")
-
-def show_credits():
-    print("Mostrando créditos...")
-
-def exit_game():
-    print("Saliendo del juego...")
-    global running
-    running = False
-    
-MENU_PRINCIPAL = 0
-PANTALLA_JUEGO = 1
-current_game_state = MENU_PRINCIPAL
-
+# -------------------- Acciones --------------------
 def play_game():
     global current_game_state
     print("¡Cambiando a Pantalla de Juego!")
@@ -82,8 +78,6 @@ def exit_game():
 
 def host_game():
     print("¡Creando una partida como host!")
-    global correr
-    correr = True
 
 def join_game():
     print("¡Uniéndome a una partida existente!")
@@ -93,59 +87,62 @@ def back_to_main_menu():
     print("Volviendo al menú principal...")
     current_game_state = MENU_PRINCIPAL
 
+# -------------------- Botones --------------------
 button_width = 200
 button_height = 70
 padding = 30
-
 margin_right = 50
 button_x = SCREEN_WIDTH - button_width - margin_right
-
-total_buttons_height = (3 * button_height) + (2 * padding)
+total_buttons_height = (4 * button_height) + (3 * padding)
 start_y = (SCREEN_HEIGHT - total_buttons_height) // 2
 
-play_button = Button(button_x, start_y, button_width, button_height, "Play", play_game)
-exit_button = Button(button_x, start_y + button_height + padding, button_width, button_height, "Exit", exit_game)
-credits_button = Button(button_x, start_y + 2 * (button_height + padding), button_width, button_height, "Credits", show_credits)
+vs_ia_button = Button(button_x, start_y, button_width, button_height, "Jugar vs IA", run_game)
+play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Play", play_game)
+credits_button = Button(button_x, start_y + (button_height + padding) * 2, button_width, button_height, "Créditos", show_credits)
+exit_button = Button(button_x, start_y + (button_height + padding) * 3, button_width, button_height, "Salir", exit_game)
 
-main_menu_buttons = [play_button, exit_button, credits_button]
+main_menu_buttons = [vs_ia_button, play_button, credits_button, exit_button]
 
+# Botones de pantalla de juego local
 game_button_width = 250
 game_button_height = 80
 game_padding_horizontal = 50 
-game_padding_vertical = 30
-
 game_center_y = (SCREEN_HEIGHT - game_button_height) // 2
-
 total_buttons_occupied_width = (2 * game_button_width) + game_padding_horizontal
 start_x_group = (SCREEN_WIDTH - total_buttons_occupied_width) // 2
 
-host_button_x = start_x_group
-join_button_x = start_x_group + game_button_width + game_padding_horizontal
-
-host_button = Button(host_button_x, game_center_y, game_button_width, game_button_height, "Host Game", host_game, GREEN, DARK_GREEN)
-join_button = Button(join_button_x, game_center_y, game_button_width, game_button_height, "Join Game", join_game, GREEN, DARK_GREEN)
-
+host_button = Button(start_x_group, game_center_y, game_button_width, game_button_height, "Host Game", host_game, GREEN, DARK_GREEN)
+join_button = Button(start_x_group + game_button_width + game_padding_horizontal, game_center_y, game_button_width, game_button_height, "Join Game", join_game, GREEN, DARK_GREEN)
 back_button = Button(20, SCREEN_HEIGHT - 50 - 20, 150, 50, "Back", back_to_main_menu, (150, 150, 0), (100, 100, 0))
 
 game_screen_buttons = [host_button, join_button, back_button]
 
-menu_image = pygame.image.load('textures\menu\logo.png')
-menu_fondo= pygame.image.load("textures\pytrucofondobackcarta\Fondomenu.png")
+# -------------------- Imágenes --------------------
+menu_image = pygame.image.load('textures/menu/logo.png')
+menu_fondo = pygame.image.load("textures/pytrucofondobackcarta/Fondomenu.png")
 menu_fondo_rect = menu_fondo.get_rect()
 menu_image = pygame.transform.scale(menu_image, (300, 300))
 image_rect = menu_image.get_rect()
 image_rect.centerx = (SCREEN_WIDTH - button_width - margin_right) // 2 
 image_rect.centery = SCREEN_HEIGHT // 2 
 
+# -------------------- Animación --------------------
+angle = 0
+def animate_logo():
+    global angle
+    scale = 1 + 0.02 * math.sin(angle)
+    angle += 0.1
+    scaled_size = int(300 * scale)
+    scaled_logo = pygame.transform.smoothscale(pygame.image.load('textures/menu/logo.png'), (scaled_size, scaled_size))
+    rect = scaled_logo.get_rect()
+    rect.center = image_rect.center
+    screen.blit(scaled_logo, rect)
+
+# -------------------- LOOP PRINCIPAL --------------------
 running = True
 while running:
-    screen.fill(BLACK)
-    screen.blit(menu_fondo,menu_fondo_rect)
-    if correr == True:
+    screen.blit(menu_fondo, menu_fondo_rect)
 
-        pygame.quit()
-        running = False
-        run_game()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -157,10 +154,8 @@ while running:
             for button in game_screen_buttons:
                 button.handle_event(event)
 
-
-    screen.blit(menu_image, image_rect)
     if current_game_state == MENU_PRINCIPAL:
-        screen.blit(menu_image, image_rect)
+        animate_logo()
         for button in main_menu_buttons:
             button.draw(screen)
     elif current_game_state == PANTALLA_JUEGO:
