@@ -106,7 +106,7 @@ total_buttons_height = (3 * button_height) + (2 * padding)
 start_y = (SCREEN_HEIGHT - 500) // 2
 
 #vs_ia_button = Button(button_x, start_y, button_width, button_height, "Jugar vs IA", run_game)
-play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Play", play_game_menu)
+play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Jugar", play_game_menu)
 credits_button = Button(button_x, start_y + (button_height + padding) * 2, button_width, button_height, "Créditos", show_credits)
 exit_button = Button(button_x, start_y + (button_height + padding) * 3, button_width, button_height, "Salir", exit_game)
 
