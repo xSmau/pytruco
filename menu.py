@@ -24,7 +24,9 @@ font = pygame.font.Font(None, 50)
 
 # Estados del menú
 MENU_PRINCIPAL = 0
-PANTALLA_JUEGO = 1
+PANTALLA_JUEGO_MENU = 1
+PANTALLA_2_JUG = 2
+
 current_game_state = MENU_PRINCIPAL
 
 # -------------------- Botón --------------------
@@ -63,10 +65,10 @@ class Button:
                     self.action()
 
 # -------------------- Acciones --------------------
-def play_game():
+def play_game_menu():
     global current_game_state
     print("¡Cambiando a Pantalla de Juego!")
-    current_game_state = PANTALLA_JUEGO
+    current_game_state = PANTALLA_JUEGO_MENU
 
 def show_credits():
     print("Mostrando créditos...")
@@ -79,7 +81,9 @@ def exit_game():
 def host_game():
     print("¡Creando una partida como host!")
 
-def join_game():
+def join_game_menu():
+    global current_game_state
+    current_game_state = PANTALLA_2_JUG
     print("¡Uniéndome a una partida existente!")
 
 def back_to_main_menu():
@@ -87,23 +91,29 @@ def back_to_main_menu():
     print("Volviendo al menú principal...")
     current_game_state = MENU_PRINCIPAL
 
+def back_to_game_menu():
+    global current_game_state
+    print("Volviendo al menú de jugar...")
+    current_game_state = PANTALLA_JUEGO_MENU
+
 # -------------------- Botones --------------------
 button_width = 200
 button_height = 70
 padding = 30
 margin_right = 50
 button_x = SCREEN_WIDTH - button_width - margin_right
-total_buttons_height = (4 * button_height) + (3 * padding)
-start_y = (SCREEN_HEIGHT - total_buttons_height) // 2
+total_buttons_height = (3 * button_height) + (2 * padding)
+start_y = (SCREEN_HEIGHT - 500) // 2
 
-vs_ia_button = Button(button_x, start_y, button_width, button_height, "Jugar vs IA", run_game)
-play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Play", play_game)
+#vs_ia_button = Button(button_x, start_y, button_width, button_height, "Jugar vs IA", run_game)
+play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Play", play_game_menu)
 credits_button = Button(button_x, start_y + (button_height + padding) * 2, button_width, button_height, "Créditos", show_credits)
 exit_button = Button(button_x, start_y + (button_height + padding) * 3, button_width, button_height, "Salir", exit_game)
 
-main_menu_buttons = [vs_ia_button, play_button, credits_button, exit_button]
+#main_menu_buttons = [vs_ia_button, play_button, credits_button, exit_button]
+main_menu_buttons = [play_button, credits_button, exit_button]
 
-# Botones de pantalla de juego local
+# Botones de pantalla de juego 
 game_button_width = 250
 game_button_height = 80
 game_padding_horizontal = 50 
@@ -111,13 +121,28 @@ game_center_y = (SCREEN_HEIGHT - game_button_height) // 2
 total_buttons_occupied_width = (2 * game_button_width) + game_padding_horizontal
 start_x_group = (SCREEN_WIDTH - total_buttons_occupied_width) // 2
 
-host_button = Button(start_x_group, game_center_y, game_button_width, game_button_height, "Host Game", host_game, GREEN, DARK_GREEN)
-join_button = Button(start_x_group + game_button_width + game_padding_horizontal, game_center_y, game_button_width, game_button_height, "Join Game", join_game, GREEN, DARK_GREEN)
+
+unjugador = Button(start_x_group, game_center_y, game_button_width, game_button_height, "1 jugador", run_game, GREEN, DARK_GREEN)
+dosjugadores = Button(start_x_group + game_button_width + game_padding_horizontal, game_center_y, game_button_width, game_button_height, "2 jugadores", join_game_menu, GREEN, DARK_GREEN)
+
 back_button = Button(20, SCREEN_HEIGHT - 50 - 20, 150, 50, "Back", back_to_main_menu, (150, 150, 0), (100, 100, 0))
 
-game_screen_buttons = [host_button, join_button, back_button]
+game_screen_buttons = [unjugador, dosjugadores, back_button]
 
-# -------------------- Imágenes --------------------
+#Botones de pantalla dos jugadores--------------------------------------------------------------------------------------------------
+two_jug_button_width = 250
+two_jug_button_height = 80
+two_jug_padding_horizontal = 50 
+two_jug_center_y = (SCREEN_HEIGHT - game_button_height) // 2
+two_jug_start_x_group = (SCREEN_WIDTH - total_buttons_occupied_width) // 2
+
+host_button = Button(start_x_group, game_center_y, game_button_width, game_button_height, "Hostear Juego", host_game, LIGHT_BLUE, DARK_BLUE)
+join_button = Button(start_x_group + game_button_width + game_padding_horizontal, game_center_y, game_button_width, game_button_height, "Unirse Juego", join_game_menu, LIGHT_BLUE, DARK_BLUE)
+back_game_button = Button(20, SCREEN_HEIGHT - 50 - 20, 150, 50, "Back", back_to_game_menu, (150, 150, 0), (100, 100, 0))
+
+pantalla_2_jug_buttons = [host_button, join_button, back_game_button]
+
+# -------------------- Imágenes -------------------------------------------------------------
 menu_image = pygame.image.load('textures/menu/logo.png')
 menu_fondo = pygame.image.load("textures/pytrucofondobackcarta/Fondomenu.png")
 menu_fondo_rect = menu_fondo.get_rect()
@@ -150,19 +175,25 @@ while running:
         if current_game_state == MENU_PRINCIPAL:
             for button in main_menu_buttons:
                 button.handle_event(event)
-        elif current_game_state == PANTALLA_JUEGO:
+        elif current_game_state == PANTALLA_JUEGO_MENU:
             for button in game_screen_buttons:
+                button.handle_event(event)
+        elif current_game_state == PANTALLA_2_JUG:
+            for button in pantalla_2_jug_buttons:
                 button.handle_event(event)
 
     if current_game_state == MENU_PRINCIPAL:
         animate_logo()
         for button in main_menu_buttons:
             button.draw(screen)
-    elif current_game_state == PANTALLA_JUEGO:
-        screen.fill(BLACK)
+    elif current_game_state == PANTALLA_JUEGO_MENU:
+        screen.blit(menu_fondo, menu_fondo_rect)
         for button in game_screen_buttons:
             button.draw(screen)
-
+    elif current_game_state == PANTALLA_2_JUG:
+        screen.blit(menu_fondo, menu_fondo_rect)
+        for button in pantalla_2_jug_buttons:
+            button.draw(screen)
     pygame.display.flip()
 
 pygame.quit()
