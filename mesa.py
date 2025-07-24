@@ -2,6 +2,7 @@ import pygame
 import random
 from data.cards import Carta
 from data.players import Jugador
+from network import Network
 
 pygame.init()
 
@@ -9,6 +10,8 @@ screen_width = 1280
 screen_height = 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Juego de Truco Venezolano")
+
+clientNumber = 0
 
 fondo = pygame.image.load("textures/pytrucofondobackcarta/Bfondomesa.png")
 fondo = pygame.transform.scale(fondo, (screen_width, screen_height))
