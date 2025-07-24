@@ -1,7 +1,7 @@
-class jugadores:
-    def __init__(self, ID: int):
-        self.id = ID
-        self.mano = list()
-    
-    def recibirCarta(self, carta):
+class Jugador:
+    def __init__(self, nombre):
+        self.nombre = nombre
+        self.mano = []
+
+    def robar_carta(self, carta):
         self.mano.append(carta)

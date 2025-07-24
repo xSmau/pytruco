@@ -1,126 +1,110 @@
 import pygame
 import random
-import time
+from data.cards import Carta
+from data.players import Jugador
 
-from data.cards import cartas
-from data.players import jugadores
+pygame.init()
 
-pygame.init()  # Inicializa todos los módulos de pygame
-pygame.mixer.init()
-
-screen_width = 800
-screen_height = 600
+screen_width = 1280
+screen_height = 720
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Truco - VS PC")
+pygame.display.set_caption("Juego de Truco Venezolano")
 
+fondo = pygame.image.load("textures/pytrucofondobackcarta/Bfondomesa.png")
+fondo = pygame.transform.scale(fondo, (screen_width, screen_height))
+
+reloj = pygame.time.Clock()
+
+# Colores y fuentes
+BLANCO = (255, 255, 255)
+NEGRO = (0, 0, 0)
+ROJO = (200, 0, 0)
 font = pygame.font.Font(None, 36)
 
-mazo = []
+# Estados del juego
+jugador1 = Jugador("Jugador")
+jugador2 = Jugador("PC")
+turno_jugador = True
+ronda_en_curso = True
 cartas_en_mesa = []
-puntos_jugador = 0
-puntos_pc = 0
+historial_cartas = []
 manos_jugador = 0
 manos_pc = 0
-ronda_en_curso = True
-turno_jugador = True
+puntos_jugador = 0
+puntos_pc = 0
 
-# ---------- FUNCIONES DE JUEGO ----------
-def barajeo():
-    global mazo
-    IDs = [["{}{}".format(p, v), pts] for p, valores in zip("MECB", [[1,2,3,4,5,6,7,10,11,12]]*4)
-           for v, pts in zip(valores, [14 if v==1 and p=='E' else 13 if v==1 and p=='B' else 12 if v==7 and p=='E' else 11 if v==7 and p=='M' else 8 for v in valores])]
-    random.shuffle(IDs)
-    mazo.clear()
-    for info in IDs:
-        palo, val = info[0][0], info[0][1:]
-        mazo.append(cartas(palo=palo, val=val, puntos=info[1]))
+# Truco Venezolano y Envido
+envido_en_juego = False
+truco_en_juego = False
+nivel_truco = 0  # 0 = no cantado, 1 = Truco, 2 = Retruco, 3 = Vale Nueve, 4 = Vale Juego
+niveles_truco = ["", "Truco", "Retruco", "Vale Nueve", "Vale Juego"]
+puntos_truco = [0, 1, 2, 3, 4]  # Puntos que otorga cada nivel
+puntos_envido = 0
 
-def iniJugadores():
-    global jugador1, jugador2
-    jugador1 = jugadores(1)
-    jugador2 = jugadores(2)
-
+# Animación de repartir
 def repartir_animado():
-    repartir()
+    jugador1.mano = []
+    jugador2.mano = []
+    mazo = Carta.generar_mazo()
+    random.shuffle(mazo)
     for i in range(3):
         animar_carta("jugador", i)
+        jugador1.robar_carta(mazo.pop())
         animar_carta("pc", i)
+        jugador2.robar_carta(mazo.pop())
 
-def repartir():
-    global vira
-    for _ in range(3):
-        jugador1.recibirCarta(mazo.pop(0))
-        jugador2.recibirCarta(mazo.pop(0))
-    vira = mazo.pop(0)
-
-def animar_carta(destino, idx):
-    x_final = 300 + idx * 80 if destino == "jugador" else 300 + idx * 80
-    y_final = 450 if destino == "jugador" else 50
+def animar_carta(destino, index):
     img_carta = pygame.image.load("textures/pytrucofondobackcarta/back.png")
     img_carta = pygame.transform.scale(img_carta, (100, 150))
     for i in range(30):
-        t = i / 30
-        x = screen_width // 2 + (x_final - screen_width // 2) * t
-        y = screen_height // 2 + (y_final - screen_height // 2) * t
-        screen.fill((0, 0, 0))
-        screen.blit(fondo_img, fondo_rect)
+        screen.blit(fondo, (0, 0))
+        mostrar_puntaje()
+        mostrar_cartas()
+        mostrar_cartas_en_mesa()
+        x = screen_width // 2 - 50 + (i * 5 if destino == "jugador" else -i * 5)
+        y = screen_height // 2 - 75 + (index * 20 if destino == "jugador" else -index * 20)
         screen.blit(img_carta, (x, y))
         pygame.display.flip()
-        pygame.time.delay(10)
+        reloj.tick(60)
 
-def mostrar_mano_estatica():
-    # Cartas del jugador abajo
+def mostrar_cartas():
     for i, carta in enumerate(jugador1.mano):
         imagen = pygame.image.load(carta.skin).convert_alpha()
         imagen = pygame.transform.scale(imagen, (100, 150))
-        x = 300 + i * 80
-        y = 450
-        screen.blit(imagen, (x, y))
-    # Cartas de la PC arriba (mostrando reverso)
+        screen.blit(imagen, (100 + i * 120, screen_height - 180))
     for i, carta in enumerate(jugador2.mano):
         imagen = pygame.image.load("textures/pytrucofondobackcarta/back.png")
         imagen = pygame.transform.scale(imagen, (100, 150))
-        x = 300 + i * 80
-        y = 50
-        screen.blit(imagen, (x, y))
+        screen.blit(imagen, (100 + i * 120, 30))
 
 def mostrar_cartas_en_mesa():
-    posiciones = {
-        "jugador": (screen_width // 2 - 40, screen_height // 2 + 50),
-        "pc": (screen_width // 2 - 40, screen_height // 2 - 150)
-    }
-    if len(cartas_en_mesa) >= 1:
-        carta_j = cartas_en_mesa[-2] if len(cartas_en_mesa) == 2 else cartas_en_mesa[-1]
-        imagen_j = pygame.image.load(carta_j.skin).convert_alpha()
-        imagen_j = pygame.transform.scale(imagen_j, (100, 150))
-        screen.blit(imagen_j, posiciones["jugador"])
-    if len(cartas_en_mesa) == 2:
-        carta_pc = cartas_en_mesa[-1]
-        imagen_pc = pygame.image.load(carta_pc.skin).convert_alpha()
-        imagen_pc = pygame.transform.scale(imagen_pc, (100, 150))
-        screen.blit(imagen_pc, posiciones["pc"])
-
-def elegir_carta_pc():
-    return max(jugador2.mano, key=lambda c: c.puntos)
-
-def animar_colocacion(carta, destino):
-    x_inicial = 300 if destino == "jugador" else 300
-    y_inicial = 450 if destino == "jugador" else 50
-    x_final = screen_width // 2
-    y_final = screen_height // 2
-    imagen = pygame.image.load(carta.skin).convert_alpha()
-    imagen = pygame.transform.scale(imagen, (70, 100))
-    for i in range(20):
-        t = i / 20
-        x = x_inicial + (x_final - x_inicial) * t
-        y = y_inicial + (y_final - y_inicial) * t
-        screen.blit(fondo_img, fondo_rect)
+    for i, carta in enumerate(cartas_en_mesa):
+        x = screen_width // 2 - 120 + (i % 2) * 160
+        y = screen_height // 2 - 150 + (i // 2) * 120
+        imagen = pygame.image.load(carta.skin).convert_alpha()
+        imagen = pygame.transform.scale(imagen, (100, 150))
         screen.blit(imagen, (x, y))
-        pygame.display.flip()
-        pygame.time.delay(15)
+
+def mostrar_puntaje():
+    pj = font.render(f"Jugador: {puntos_jugador} (manos: {manos_jugador})", True, BLANCO)
+    pc = font.render(f"PC: {puntos_pc} (manos: {manos_pc})", True, BLANCO)
+    screen.blit(pj, (10, screen_height - 40))
+    screen.blit(pc, (10, 10))
+    if envido_en_juego:
+        screen.blit(font.render("ENVIDO", True, ROJO), (300, 10))
+    if truco_en_juego:
+        screen.blit(font.render(f"{niveles_truco[nivel_truco].upper()} x{puntos_truco[nivel_truco]}", True, ROJO), (300, 40))
+
+def jugar_carta(jugador, indice):
+    global turno_jugador
+    carta = jugador.mano.pop(indice)
+    cartas_en_mesa.append(carta)
+    if len(cartas_en_mesa) == 2:
+        evaluar_mano()
+    turno_jugador = not turno_jugador
 
 def evaluar_mano():
-    global manos_jugador, manos_pc, cartas_en_mesa
+    global manos_jugador, manos_pc, cartas_en_mesa, historial_cartas
     if len(cartas_en_mesa) < 2:
         return
     c1, c2 = cartas_en_mesa[-2], cartas_en_mesa[-1]
@@ -128,104 +112,126 @@ def evaluar_mano():
         manos_jugador += 1
     elif c1.puntos < c2.puntos:
         manos_pc += 1
+    historial_cartas.extend(cartas_en_mesa)
     cartas_en_mesa = []
 
 def chequear_ronda():
-    global puntos_jugador, puntos_pc, manos_jugador, manos_pc, ronda_en_curso
+    global manos_jugador, manos_pc, puntos_jugador, puntos_pc, ronda_en_curso, historial_cartas, nivel_truco, truco_en_juego
     if manos_jugador >= 2:
-        puntos_jugador += 1
-        mostrar_mensaje("¡Ganaste la ronda!")
-        manos_jugador = manos_pc = 0
+        puntos_jugador += puntos_truco[nivel_truco]
         ronda_en_curso = False
     elif manos_pc >= 2:
-        puntos_pc += 1
-        mostrar_mensaje("La PC ganó la ronda")
-        manos_jugador = manos_pc = 0
+        puntos_pc += puntos_truco[nivel_truco]
         ronda_en_curso = False
+    if not ronda_en_curso:
+        pygame.time.wait(1500)
+        historial_cartas.clear()
+        nivel_truco = 0
+        truco_en_juego = False
 
-def mostrar_mensaje(texto):
-    mensaje = font.render(texto, True, (255, 255, 255))
-    rect = mensaje.get_rect(center=(screen_width // 2, screen_height // 2))
-    screen.blit(mensaje, rect)
-    pygame.display.flip()
-    pygame.time.delay(1500)
+def cantar_envido():
+    global envido_en_juego, puntos_envido
+    envido_en_juego = True
+    puntos_envido = 2
+    print("¡Cantaste Envido!")
 
-def mostrar_puntaje():
-    pj = font.render(f"Jugador: {puntos_jugador}", True, (255, 255, 255))
-    pc = font.render(f"PC: {puntos_pc}", True, (255, 255, 255))
-    screen.blit(pj, (10, 10))
-    screen.blit(pc, (10, 40))
+def cantar_truco():
+    global truco_en_juego, nivel_truco
+    if nivel_truco < 4:
+        nivel_truco += 1
+        truco_en_juego = True
+        print(f"¡Cantaste {niveles_truco[nivel_truco]}!")
 
-# ---------- LOOP PRINCIPAL ----------
+def aceptar_canto():
+    global envido_en_juego, truco_en_juego, puntos_jugador, puntos_pc
+    if envido_en_juego:
+        ganador = comparar_envido()
+        if ganador == "jugador":
+            puntos_jugador += puntos_envido
+            print("Ganaste el Envido")
+        else:
+            puntos_pc += puntos_envido
+            print("Perdiste el Envido")
+        envido_en_juego = False
+    elif truco_en_juego:
+        print(f"Aceptaste el {niveles_truco[nivel_truco]}")
+
+def rechazar_canto():
+    global envido_en_juego, truco_en_juego, puntos_pc, puntos_jugador, ronda_en_curso, nivel_truco
+    if envido_en_juego:
+        puntos_pc += 1
+        envido_en_juego = False
+        print("Rechazaste el Envido")
+    elif truco_en_juego:
+        puntos_pc += puntos_truco[nivel_truco - 1]
+        truco_en_juego = False
+        ronda_en_curso = False
+        print(f"Rechazaste el {niveles_truco[nivel_truco]}")
+        nivel_truco = 0
+
+def comparar_envido():
+    def calcular_envido(mano):
+        palos = {}
+        for carta in mano:
+            if carta.palo not in palos:
+                palos[carta.palo] = []
+            if int(carta.valor) <= 7:
+                palos[carta.palo].append(int(carta.valor))
+        max_puntos = 0
+        for valores in palos.values():
+            if len(valores) >= 2:
+                puntos = 20 + sum(sorted(valores)[-2:])
+                max_puntos = max(max_puntos, puntos)
+            elif len(valores) == 1:
+                max_puntos = max(max_puntos, valores[0])
+        return max_puntos
+    p_jug = calcular_envido(jugador1.mano)
+    p_pc = calcular_envido(jugador2.mano)
+    return "jugador" if p_jug >= p_pc else "pc"
+
 def run_game():
-    global ronda_en_curso, turno_jugador
-    clock = pygame.time.Clock()
-
-    global fondo_img, fondo_rect
-    fondo_img = pygame.image.load("textures/pytrucofondobackcarta/Bfondomesa.png")
-    fondo_rect = fondo_img.get_rect()
-
-    barajeo()
-    iniJugadores()
+    global turno_jugador, ronda_en_curso, manos_jugador, manos_pc, nivel_truco
     repartir_animado()
+    ronda_en_curso = True
+    manos_jugador = 0
+    manos_pc = 0
+    nivel_truco = 0
+    corriendo = True
 
-    imagen_virada = pygame.image.load(vira.skin).convert_alpha()
-    imagen_virada = pygame.transform.scale(imagen_virada, (100, 150))
-    rect_virada = imagen_virada.get_rect(center=(700, 200))
-
-    carta_pc_pendiente = None
-    delay_pc = 30
-    pc_timer = 0
-
-    running = True
-    while running:
+    while corriendo:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                running = False
-
-            if event.type == pygame.MOUSEBUTTONDOWN and turno_jugador and ronda_en_curso:
-                mouse_x, mouse_y = event.pos
-                for carta in jugador1.mano:
-                    imagen = pygame.image.load(carta.skin).convert_alpha()
-                    imagen = pygame.transform.scale(imagen, (100, 150))
-                    rect = imagen.get_rect(center=(300 + jugador1.mano.index(carta)*80, 450))
-                    if rect.collidepoint(mouse_x, mouse_y):
-                        jugador1.mano.remove(carta)
-                        animar_colocacion(carta, "jugador")
-                        cartas_en_mesa.append(carta)
-                        turno_jugador = False
-                        carta_pc_pendiente = elegir_carta_pc()
-                        pc_timer = delay_pc
+            if event.type == pygame.QUIT:
+                corriendo = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and turno_jugador and ronda_en_curso:
+                x, y = pygame.mouse.get_pos()
+                for i, carta in enumerate(jugador1.mano):
+                    rect = pygame.Rect(100 + i * 120, screen_height - 180, 100, 150)
+                    if rect.collidepoint(x, y):
+                        jugar_carta(jugador1, i)
                         break
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    cantar_envido()
+                elif event.key == pygame.K_t:
+                    cantar_truco()
+                elif event.key == pygame.K_y:
+                    aceptar_canto()
+                elif event.key == pygame.K_n:
+                    rechazar_canto()
 
-        if not turno_jugador and carta_pc_pendiente and ronda_en_curso:
-            pc_timer -= 1
-            if pc_timer <= 0:
-                jugador2.mano.remove(carta_pc_pendiente)
-                animar_colocacion(carta_pc_pendiente, "pc")
-                cartas_en_mesa.append(carta_pc_pendiente)
-                carta_pc_pendiente = None
-                turno_jugador = True
-                evaluar_mano()
-                chequear_ronda()
-
-        if not ronda_en_curso:
-            pygame.time.delay(1000)
-            barajeo()
-            iniJugadores()
-            repartir_animado()
-            ronda_en_curso = True
-            turno_jugador = True
-
-        screen.blit(fondo_img, fondo_rect)
-        screen.blit(imagen_virada, rect_virada)
-        mostrar_mano_estatica()
-        mostrar_cartas_en_mesa()
+        screen.blit(fondo, (0, 0))
         mostrar_puntaje()
+        mostrar_cartas()
+        mostrar_cartas_en_mesa()
+
+        if not turno_jugador and ronda_en_curso and jugador2.mano:
+            pygame.time.wait(1000)
+            jugar_carta(jugador2, 0)
+
+        chequear_ronda()
+
         pygame.display.flip()
-        clock.tick(60)
+        reloj.tick(60)
 
-    pygame.quit()
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_game()
