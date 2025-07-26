@@ -44,10 +44,10 @@ ESTADO_HOST = 3
 ESTADO_CLIENTE = 4
 
 current_game_state = MENU_PRINCIPAL
-
+boton_sonido= pygame.mixer.Sound('sounds\paper1.ogg')
 # -------------------- Botón --------------------
 class Button:
-    def __init__(self, x, y, width, height, text, action=None, color=None, hover_color=None):
+    def __init__(self, x, y, width, height, text, action=None,sound_effect=None, color=None, hover_color=None):
         if color is None:
             color = LIGHT_BLUE
         if hover_color is None:
@@ -56,6 +56,7 @@ class Button:
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.action = action
+        self.sound_effect = boton_sonido
         self.color = color
         self.hover_color = hover_color
         self.text_color = WHITE
@@ -76,9 +77,13 @@ class Button:
         if event.type == pygame.MOUSEMOTION:
             self.is_hovered = self.rect.collidepoint(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and self.is_hovered:
+            if event.button == 1 and self.is_hovered: # Clic izquierdo y está en hover
+                if self.sound_effect: # <-- ¡Si hay un sonido asignado!
+                    self.sound_effect.play() # <-- ¡Reproduce el sonido!
                 if self.action:
-                    self.action()
+                    self.action() # Ejecuta la acción asociada al botón
+                return True # Retorna True para indicar que el botón fue clickeado
+        return False
 
 # -------------------- Acciones --------------------
 def play_game_menu():
@@ -123,6 +128,7 @@ def back_to_join_menu():
     global current_game_state
     current_game_state = PANTALLA_2_JUG
     print("Volviendo al menu de 2 jugadores")
+
 # -------------------- Botones --------------------
 button_width = 200
 button_height = 70
@@ -133,9 +139,9 @@ total_buttons_height = (3 * button_height) + (2 * padding)
 start_y = (SCREEN_HEIGHT - 500) // 2
 
 #vs_ia_button = Button(button_x, start_y, button_width, button_height, "Jugar vs IA", run_game)
-play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Jugar", play_game_menu)
-credits_button = Button(button_x, start_y + (button_height + padding) * 2, button_width, button_height, "Créditos", show_credits)
-exit_button = Button(button_x, start_y + (button_height + padding) * 3, button_width, button_height, "Salir", exit_game)
+play_button = Button(button_x, start_y + (button_height + padding) * 1, button_width, button_height, "Jugar", play_game_menu,)
+credits_button = Button(button_x, start_y + (button_height + padding) * 2, button_width, button_height, "Créditos", show_credits,)
+exit_button = Button(button_x, start_y + (button_height + padding) * 3, button_width, button_height, "Salir", exit_game,)
 
 #main_menu_buttons = [vs_ia_button, play_button, credits_button, exit_button]
 main_menu_buttons = [play_button, credits_button, exit_button]
@@ -245,6 +251,7 @@ def animate_logo():
 
 # -------------------- LOOP PRINCIPAL --------------------
 running = True
+
 while running:
     screen.blit(menu_fondo, menu_fondo_rect)
 
