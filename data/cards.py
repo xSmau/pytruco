@@ -3,9 +3,9 @@ class Carta:
         self.pinta = palo
         self.valor = int(val)
         self.puntos = puntos
-        inicial_palo = {"copa": "C", "espada": "E", "basto": "B", "oro": "O"}[palo.lower()]
+        inicial_palo = {"copa": "C", "espada": "E", "basto": "B", "oro": "M"}[palo.lower()]
         self.id = f"{inicial_palo}{val}"
-        self.skin = f'textures/pytrucofondobackcarta/{self.id}.png'
+        self.skin = f'textures/{self.id}.png'
 
     @staticmethod
     def generar_mazo():
