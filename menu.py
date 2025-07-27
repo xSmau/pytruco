@@ -1,21 +1,8 @@
 import pygame
 from mesa import run_game
 import math
-import socket
-
-def get_local_ip_address():
-    global ip_address
-    """
-    Retrieves and returns the local IP address of the machine.
-    """
-    try:
-        # Get the hostname of the local machine
-        hostname = socket.gethostname()
-        # Resolve the hostname to its corresponding IP address
-        ip_address = socket.gethostbyname(hostname)
-        return ip_address
-    except socket.error as e:
-        return f"Error getting IP address: {e}"
+from server import get_local_ip_address
+from network import *
     
 pygame.init()
 
@@ -118,6 +105,8 @@ def back_to_game_menu():
 def host_menu():
     global current_game_state
     print("Host menu")
+    n = Network()
+    n.connect()
     current_game_state = ESTADO_HOST
 
 def join_menu():
@@ -271,7 +260,10 @@ while running:
             if active:
                 if event.key == pygame.K_RETURN: # Si se presiona Enter, se "envía" el texto
                     print(f"Texto ingresado: {text}")
-                    ip_address = text
+                    #ip_add = text
+                    with open("data\\ip_address.txt", "w", encoding="utf-8") as archivo:
+                        archivo.write(text)
+                    #print(f"ip: {ip_add}")
                     # Aquí puedes hacer algo con la variable 'text'
                     # Por ejemplo, podrías almacenarla en una lista, base de datos, etc.
                     # Para este ejemplo, solo la imprimimos y reseteamos la caja

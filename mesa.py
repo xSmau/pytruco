@@ -11,8 +11,6 @@ screen_height = 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Juego de Truco Venezolano")
 
-clientNumber = 0
-
 fondo = pygame.image.load("textures/pytrucofondobackcarta/Bfondomesa.png")
 fondo = pygame.transform.scale(fondo, (screen_width, screen_height))
 
@@ -43,6 +41,12 @@ nivel_truco = 0  # 0 = no cantado, 1 = Truco, 2 = Retruco, 3 = Vale Nueve, 4 = V
 niveles_truco = ["", "Truco", "Retruco", "Vale Nueve", "Vale Juego"]
 puntos_truco = [0, 1, 2, 3, 4]  # Puntos que otorga cada nivel
 puntos_envido = 0
+
+#Crear la conexion 
+def crearConexion():
+    global n
+    n = Network()
+
 
 # Animación de repartir
 def repartir_animado():
@@ -191,6 +195,52 @@ def comparar_envido():
     p_jug = calcular_envido(jugador1.mano)
     p_pc = calcular_envido(jugador2.mano)
     return "jugador" if p_jug >= p_pc else "pc"
+
+def run_online_game():
+    global turno_jugador, ronda_en_curso, manos_jugador, manos_pc, nivel_truco
+    repartir_animado()
+    ronda_en_curso = True
+    manos_jugador = 0
+    manos_pc = 0
+    nivel_truco = 0
+    corriendo = True
+
+    crearConexion()
+
+    while corriendo:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                corriendo = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and turno_jugador and ronda_en_curso:
+                x, y = pygame.mouse.get_pos()
+                for i, carta in enumerate(jugador1.mano):
+                    rect = pygame.Rect(100 + i * 120, screen_height - 180, 100, 150)
+                    if rect.collidepoint(x, y):
+                        jugar_carta(jugador1, i)
+                        break
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    cantar_envido()
+                elif event.key == pygame.K_t:
+                    cantar_truco()
+                elif event.key == pygame.K_y:
+                    aceptar_canto()
+                elif event.key == pygame.K_n:
+                    rechazar_canto()
+
+        screen.blit(fondo, (0, 0))
+        mostrar_puntaje()
+        mostrar_cartas()
+        mostrar_cartas_en_mesa()
+
+        if not turno_jugador and ronda_en_curso and jugador2.mano:
+            pygame.time.wait(1000)
+            jugar_carta(jugador2, 0)
+
+        chequear_ronda()
+
+        pygame.display.flip()
+        reloj.tick(60)
 
 def run_game():
     global turno_jugador, ronda_en_curso, manos_jugador, manos_pc, nivel_truco
