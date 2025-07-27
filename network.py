@@ -1,9 +1,10 @@
 import socket
+from menu import ip_address
 
 class Network:
     def __init__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server = "" 
+        self.server = str(ip_address) 
         #Aqui ^ va el IP del HOST
         #   Ademas debe de ser el que esta en server.py
         self.port = 5555

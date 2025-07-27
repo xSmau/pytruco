@@ -4,6 +4,7 @@ import math
 import socket
 
 def get_local_ip_address():
+    global ip_address
     """
     Retrieves and returns the local IP address of the machine.
     """
@@ -270,6 +271,7 @@ while running:
             if active:
                 if event.key == pygame.K_RETURN: # Si se presiona Enter, se "envía" el texto
                     print(f"Texto ingresado: {text}")
+                    ip_address = text
                     # Aquí puedes hacer algo con la variable 'text'
                     # Por ejemplo, podrías almacenarla en una lista, base de datos, etc.
                     # Para este ejemplo, solo la imprimimos y reseteamos la caja

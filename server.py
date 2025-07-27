@@ -1,10 +1,11 @@
 import socket 
 from _thread import *
 import sys
+from menu import ip_address
 
 serverConnected = ""
 serverStatus = ""
-server = "" #Aqui debe ir la direccion IP del HOST
+server = str(ip_address) #Aqui debe ir la direccion IP del HOST
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
